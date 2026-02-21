@@ -1,23 +1,60 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { useLaunchParams } from "@tma.js/sdk-react";
+import { useEffect, useState, type ReactNode } from "react";
+
+let tmaInitialized = false;
 
 function TMAInitializer() {
   useEffect(() => {
-    // Dynamically initialize TMA SDK only on client, only when inside Telegram
+    if (tmaInitialized) return;
+    tmaInitialized = true;
+
     async function initTMA() {
       try {
-        const { isTMA, init, viewport } = await import("@tma.js/sdk");
+        const {
+          isTMA,
+          init,
+          restoreInitData,
+          miniApp,
+          viewport,
+          backButton,
+          closingBehavior,
+        } = await import("@telegram-apps/sdk-react");
+
         if (!isTMA()) return;
 
-        init({ acceptCustomStyles: true });
+        init();
+        restoreInitData();
+
+        // Mount mini app component for styling methods
+        if (miniApp.mountSync.isAvailable()) {
+          miniApp.mountSync();
+        }
 
         // Mount and expand viewport to full height
-        if (!viewport.isMounted()) {
-          await viewport.mount();
+        if (viewport.mount.isAvailable()) {
+          viewport.mount().then(() => {
+            if (viewport.expand.isAvailable()) {
+              viewport.expand();
+            }
+          });
         }
-        viewport.expand();
+
+        // Back button: navigate browser history instead of closing the app
+        if (backButton.mount.isAvailable()) {
+          backButton.mount();
+          backButton.onClick(() => {
+            window.history.back();
+          });
+        }
+
+        // Closing behavior: ask for confirmation to prevent accidental close
+        if (closingBehavior.mount.isAvailable()) {
+          closingBehavior.mount();
+        }
+        if (closingBehavior.enableConfirmation.isAvailable()) {
+          closingBehavior.enableConfirmation();
+        }
       } catch {
         // Not in Telegram Mini App context — no-op
       }
@@ -47,21 +84,39 @@ export function useTMAUser(): {
   lastName?: string;
   username?: string;
 } | null {
-  try {
-    const params = useLaunchParams(true) as unknown as {
-      initData?: { user?: { id: number; firstName: string; lastName?: string; username?: string } };
-    };
-    const user = params?.initData?.user;
-    if (!user) return null;
-    return {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      username: user.username,
-    };
-  } catch {
-    return null;
-  }
+  const [user, setUser] = useState<{
+    id: number;
+    firstName: string;
+    lastName?: string;
+    username?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    async function getUser() {
+      try {
+        const { isTMA, retrieveLaunchParams } = await import("@telegram-apps/sdk-react");
+        if (!isTMA()) return;
+        const params = retrieveLaunchParams(true) as {
+          initData?: { user?: { id: number; firstName: string; lastName?: string; username?: string } };
+          startParam?: string;
+        };
+        const u = params?.initData?.user;
+        if (u) {
+          setUser({
+            id: u.id,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            username: u.username,
+          });
+        }
+      } catch {
+        // Not in TMA context
+      }
+    }
+    getUser();
+  }, []);
+
+  return user;
 }
 
 /**
@@ -69,10 +124,21 @@ export function useTMAUser(): {
  * This is the planId passed via deep link: t.me/bot/app?startapp=<planId>
  */
 export function useTMAStartParam(): string | null {
-  try {
-    const params = useLaunchParams(true) as unknown as { startParam?: string };
-    return params?.startParam ?? null;
-  } catch {
-    return null;
-  }
+  const [startParam, setStartParam] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function getStartParam() {
+      try {
+        const { isTMA, retrieveLaunchParams } = await import("@telegram-apps/sdk-react");
+        if (!isTMA()) return;
+        const params = retrieveLaunchParams(true) as { startParam?: string };
+        setStartParam(params?.startParam ?? null);
+      } catch {
+        // Not in TMA context
+      }
+    }
+    getStartParam();
+  }, []);
+
+  return startParam;
 }
