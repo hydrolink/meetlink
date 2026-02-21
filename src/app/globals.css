@@ -128,6 +128,8 @@
       radial-gradient(circle at 95% 4%, rgba(197, 140, 88, 0.2), transparent 42%),
       linear-gradient(180deg, #fffaf2 0%, #f7ead6 100%);
     background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: auto, auto, 100% 100%;
   }
 
   .app-shell {
@@ -144,6 +146,7 @@
       background: rgba(255, 250, 241, 0.78);
       box-shadow: 0 20px 48px -30px rgba(120, 84, 44, 0.45);
       backdrop-filter: blur(2px);
+      overflow: clip;
     }
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatDateHeader, formatTime12h } from "@/lib/utils";
@@ -44,12 +44,15 @@ export function SlotGridSelector({
   );
   const [saving, setSaving] = useState(false);
   const [isTouchDragging, setIsTouchDragging] = useState(false);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
+  const [dragLabel, setDragLabel] = useState<"marking" | "clearing" | null>(null);
 
   const isDragging = useRef(false);
   const activePointerId = useRef<number | null>(null);
   const lastPaintedSlotKey = useRef<string | null>(null);
   const paintMode = useRef<boolean>(true); // true = paint available, false = clear
   const dirtySlots = useRef<Map<string, boolean>>(new Map());
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const { dates, times, grid } = useMemo(() => buildGrid(slots), [slots]);
 
@@ -57,6 +60,18 @@ export function SlotGridSelector({
     () => Array.from(localAvailability.values()).filter(Boolean).length,
     [localAvailability]
   );
+  const cellMinWidth = isCoarsePointer ? 52 : 44;
+  const cellMaxWidth = isCoarsePointer ? 68 : 60;
+  const rowHeight = isCoarsePointer ? 40 : 36;
+  const timeColumnWidth = isCoarsePointer ? 64 : 56;
+
+  useEffect(() => {
+    const media = window.matchMedia("(pointer: coarse)");
+    const update = () => setIsCoarsePointer(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const applyPaint = useCallback((slotKey: string) => {
     const newValue = paintMode.current;
@@ -84,6 +99,27 @@ export function SlotGridSelector({
     const element = document.elementFromPoint(clientX, clientY);
     if (!(element instanceof HTMLElement)) return null;
     return element.closest<HTMLElement>("[data-slot-key]")?.dataset.slotKey ?? null;
+  }, []);
+
+  const autoScrollWhileDragging = useCallback((clientX: number, clientY: number) => {
+    const container = scrollContainerRef.current;
+    if (!container || !isDragging.current) return;
+
+    const rect = container.getBoundingClientRect();
+    const edgeThreshold = 28;
+    const scrollStep = 14;
+    let dx = 0;
+    let dy = 0;
+
+    if (clientX < rect.left + edgeThreshold) dx = -scrollStep;
+    else if (clientX > rect.right - edgeThreshold) dx = scrollStep;
+
+    if (clientY < rect.top + edgeThreshold) dy = -scrollStep;
+    else if (clientY > rect.bottom - edgeThreshold) dy = scrollStep;
+
+    if (dx !== 0 || dy !== 0) {
+      container.scrollBy({ left: dx, top: dy });
+    }
   }, []);
 
   const commitDirty = useCallback(async () => {
@@ -120,6 +156,7 @@ export function SlotGridSelector({
     activePointerId.current = null;
     lastPaintedSlotKey.current = null;
     setIsTouchDragging(false);
+    setDragLabel(null);
 
     if (wasDragging || dirtySlots.current.size > 0) {
       void commitDirty();
@@ -139,6 +176,7 @@ export function SlotGridSelector({
     if (e.pointerType === "touch") {
       setIsTouchDragging(true);
     }
+    setDragLabel(paintMode.current ? "marking" : "clearing");
 
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -163,6 +201,7 @@ export function SlotGridSelector({
     }
 
     applyPaintIfNeeded(getSlotKeyAtPoint(e.clientX, e.clientY));
+    autoScrollWhileDragging(e.clientX, e.clientY);
   }
 
   async function handleClearAll() {
@@ -230,11 +269,16 @@ export function SlotGridSelector({
           <span className="w-3 h-3 rounded-sm bg-[hsl(38_44%_88%)] inline-block" />
           Unavailable
         </span>
-        {isTouchDragging && <span className="ml-auto font-medium text-primary/85">Release to save</span>}
+        {isTouchDragging && (
+          <span className="ml-auto font-medium text-primary/85">
+            {dragLabel === "clearing" ? "Dragging to clear" : "Dragging to mark"} - release to save
+          </span>
+        )}
       </div>
 
       {/* Grid container with horizontal/vertical scroll */}
       <div
+        ref={scrollContainerRef}
         className="overflow-x-auto overflow-y-auto max-h-[60vh] rounded-lg border bg-background/70"
         style={{ touchAction: isTouchDragging ? "none" : "pan-x pan-y" }}
       >
@@ -242,9 +286,9 @@ export function SlotGridSelector({
           className="select-none"
           style={{
             display: "grid",
-            gridTemplateColumns: `56px repeat(${dates.length}, minmax(44px, 60px))`,
-            gridTemplateRows: `auto repeat(${times.length}, 36px)`,
-            minWidth: `${56 + dates.length * 44}px`,
+            gridTemplateColumns: `${timeColumnWidth}px repeat(${dates.length}, minmax(${cellMinWidth}px, ${cellMaxWidth}px))`,
+            gridTemplateRows: `auto repeat(${times.length}, ${rowHeight}px)`,
+            minWidth: `${timeColumnWidth + dates.length * cellMinWidth}px`,
           }}
           onPointerMove={handlePointerMove}
           onPointerUp={(e) => finishDrag(e.pointerId)}
