@@ -1,4 +1,4 @@
-﻿import type { SlotResult } from "@/types";
+import type { SlotResult } from "@/types";
 
 /**
  * Re-filters slot results to only count selected participants.
