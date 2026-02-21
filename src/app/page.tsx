@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Calendar, Clock, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StartParamRedirect } from "@/components/start-param-redirect";
 
 export default function HomePage() {
   return (
     <div className="relative flex flex-col items-center py-10 gap-8">
+      {/* Deep-link redirect: if opened via t.me/bot/schedule?startapp=<planId>, go straight to the plan */}
+      <StartParamRedirect />
       {/* Logo / Hero */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center justify-center w-[4.5rem] h-[4.5rem] rounded-3xl mb-2 bg-gradient-to-br from-[#f8e4c5] via-[#f4d5ab] to-[#e8b780] ring-1 ring-[#d8b486] shadow-[0_14px_34px_-18px_rgba(143,94,41,0.85)]">
