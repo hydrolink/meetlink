@@ -25,7 +25,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#ffffff",
+  themeColor: "#f7ead6",
 };
 
 export default function RootLayout({
@@ -47,7 +47,7 @@ export default function RootLayout({
       </head>
       <body className={`${geist.variable} font-sans antialiased bg-background text-foreground`}>
         <TMAProvider>
-          <main className="min-h-screen max-w-lg mx-auto px-4 py-6">{children}</main>
+          <main className="app-shell min-h-screen max-w-lg mx-auto px-4 py-6">{children}</main>
           <Toaster position="bottom-center" richColors />
         </TMAProvider>
       </body>
