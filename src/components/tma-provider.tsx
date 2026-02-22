@@ -122,11 +122,23 @@ export function useTMAUser(): {
 /**
  * Hook to safely read the Telegram launch start parameter.
  * This is the planId passed via deep link: t.me/bot/app?startapp=<planId>
+ *
+ * Reads directly from window.Telegram.WebApp first (available synchronously
+ * since the Telegram script loads beforeInteractive), then falls back to
+ * the SDK. This avoids a race with TMAInitializer's async init().
  */
 export function useTMAStartParam(): string | null {
-  const [startParam, setStartParam] = useState<string | null>(null);
+  const [startParam, setStartParam] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tg = (window as any).Telegram?.WebApp;
+    return tg?.initDataUnsafe?.start_param ?? null;
+  });
 
   useEffect(() => {
+    // If already resolved synchronously, skip async fallback
+    if (startParam) return;
+
     async function getStartParam() {
       try {
         const { isTMA, retrieveLaunchParams } = await import("@telegram-apps/sdk-react");
@@ -138,7 +150,7 @@ export function useTMAStartParam(): string | null {
       }
     }
     getStartParam();
-  }, []);
+  }, [startParam]);
 
   return startParam;
 }

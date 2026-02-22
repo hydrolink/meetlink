@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
+import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { copyToClipboard } from "@/lib/utils";
 
 interface ShareButtonProps {
   planId: string;
@@ -43,7 +42,6 @@ export function ShareButton({
   variant = "default",
   className,
 }: ShareButtonProps) {
-  const [copied, setCopied] = useState(false);
   const [canTelegramShare, setCanTelegramShare] = useState(false);
   const planLink = useMemo(() => resolvePlanLink(planId), [planId]);
 
@@ -70,37 +68,38 @@ export function ShareButton({
     }
   }
 
-  async function handleCopyLink() {
-    try {
-      await copyToClipboard(planLink);
-      setCopied(true);
-      toast.success("Link copied!");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Could not copy link");
+  async function handleNativeShare() {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: planTitle ?? "Scheduling plan",
+          text: planTitle ? `Join my scheduling poll: ${planTitle}` : "Join my scheduling poll!",
+          url: planLink,
+        });
+      } catch {
+        // User cancellation or browser rejection can be ignored.
+      }
+      return;
     }
+
+    toast.error("Share is not available on this device");
   }
 
   if (canTelegramShare) {
     return (
       <div className={className}>
-        <div className="flex gap-2">
-          <Button variant={variant} onClick={handleTelegramShare} className="flex-1">
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
-          </Button>
-          <Button variant="outline" onClick={handleCopyLink} className="shrink-0">
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </Button>
-        </div>
+        <Button variant={variant} onClick={handleTelegramShare} className="w-full">
+          <Share2 className="h-4 w-4 mr-2" />
+          Share this plan
+        </Button>
       </div>
     );
   }
 
   return (
-    <Button variant={variant} onClick={handleCopyLink} className={className}>
-      {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-      {copied ? "Link Copied" : "Copy Link"}
+    <Button variant={variant} onClick={handleNativeShare} className={className}>
+      <Share2 className="h-4 w-4 mr-2" />
+      Share this plan
     </Button>
   );
 }
