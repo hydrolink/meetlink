@@ -129,11 +129,11 @@ export function SlotGridSelector({
       slotKey,
       available,
     }));
-    dirtySlots.current.clear();
 
     setSaving(true);
     try {
       await onSave(updates);
+      dirtySlots.current.clear();
     } catch {
       // Revert optimistic update on error
       setLocalAvailability(new Map(initialAvailability ?? []));

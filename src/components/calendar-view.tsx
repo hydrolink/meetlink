@@ -48,7 +48,8 @@ export function CalendarView({
 
       <div className="space-y-4">
         {sortedDates.map((date) => {
-          const daySlots = grouped.get(date)!;
+          const daySlots = grouped.get(date);
+          if (!daySlots) return null;
           return (
             <div key={date}>
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
@@ -102,7 +103,7 @@ export function CalendarView({
                               }}
                             />
                           </div>
-                          {availableNames.length > 0 && participants[0]?.displayName && (
+                          {availableNames.length > 0 && (
                             <p className="text-xs text-muted-foreground mt-0.5 truncate">
                               {availableNames.slice(0, 3).join(", ")}
                               {availableNames.length > 3 && ` +${availableNames.length - 3} more`}
