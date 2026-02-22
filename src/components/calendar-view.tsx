@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDateFull, formatTime12h } from "@/lib/utils";
 import { getTopSlots, groupSlotsByDate, intensityToColor, slotIntensity } from "@/lib/results";
-import type { SlotResult, ParticipantInfo } from "@/types";
+import type { ParticipantInfo, SlotResult } from "@/types";
 
 interface CalendarViewProps {
   results: SlotResult[];
@@ -21,14 +21,12 @@ export function CalendarView({
   topN = 10,
 }: CalendarViewProps) {
   const topSlots = useMemo(() => getTopSlots(results, topN), [results, topN]);
-  const topSlotKeys = useMemo(() => new Set(topSlots.map((s) => s.slotKey)), [topSlots]);
-
   const grouped = useMemo(() => groupSlotsByDate(topSlots), [topSlots]);
   const sortedDates = useMemo(() => Array.from(grouped.keys()).sort(), [grouped]);
 
   if (topSlots.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground text-sm">
+      <div className="py-12 text-center text-sm text-muted-foreground">
         No availability data yet. Participants need to fill in their schedules first.
       </div>
     );
@@ -36,12 +34,12 @@ export function CalendarView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Trophy className="h-4 w-4 text-amber-500" />
-        <p className="text-sm font-medium">
+        <p className="text-sm font-semibold">
           Best {topSlots.length} slot{topSlots.length !== 1 ? "s" : ""}
         </p>
-        <Badge variant="secondary" className="text-xs">
+        <Badge variant="secondary">
           {totalParticipants} participant{totalParticipants !== 1 ? "s" : ""}
         </Badge>
       </div>
@@ -50,73 +48,69 @@ export function CalendarView({
         {sortedDates.map((date) => {
           const daySlots = grouped.get(date);
           if (!daySlots) return null;
+
           return (
-            <div key={date}>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                {formatDateFull(date)}
-              </h3>
-              <div className="space-y-1.5">
+            <div key={date} className="space-y-2">
+              <h3 className="section-label">{formatDateFull(date)}</h3>
+
+              <div className="space-y-2">
                 {daySlots
                   .sort((a, b) => a.localTime.localeCompare(b.localTime))
-                  .map((slot, idx) => {
+                  .map((slot, index) => {
                     const intensity = slotIntensity(slot, totalParticipants);
-                    const isTop = idx === 0 && slot === topSlots[0];
+                    const isTop = index === 0 && slot === topSlots[0];
                     const availableNames = slot.availableParticipantIds
-                      .map((pid) => participants.find((p) => p.id === pid)?.displayName)
+                      .map((participantId) => participants.find((p) => p.id === participantId)?.displayName)
                       .filter(Boolean) as string[];
 
                     return (
                       <div
                         key={slot.slotKey}
                         className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border transition-colors",
-                          isTop && "border-amber-300 bg-amber-50"
+                          "rounded-xl border px-3 py-2.5 transition-colors",
+                          isTop ? "border-amber-300 bg-amber-50" : "border-border/75 bg-background/65"
                         )}
                       >
-                        {/* Rank badge */}
-                        <div className="shrink-0 text-center">
-                          {isTop ? (
-                            <Trophy className="h-4 w-4 text-amber-500" />
-                          ) : (
-                            <span
-                              className="w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold text-white"
-                              style={{ backgroundColor: intensityToColor(intensity) }}
-                            >
-                              {results.filter((r) => r.availableCount > slot.availableCount).length + 1}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Time */}
-                        <div className="shrink-0">
-                          <p className="font-semibold text-sm">{formatTime12h(slot.localTime)}</p>
-                        </div>
-
-                        {/* Bar */}
-                        <div className="flex-1 min-w-0">
-                          <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${Math.round(intensity * 100)}%`,
-                                backgroundColor: intensityToColor(intensity),
-                              }}
-                            />
+                        <div className="flex items-center gap-3">
+                          <div className="shrink-0 text-center">
+                            {isTop ? (
+                              <Trophy className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <span
+                                className="inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
+                                style={{ backgroundColor: intensityToColor(intensity) }}
+                              >
+                                {index + 1}
+                              </span>
+                            )}
                           </div>
-                          {availableNames.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                              {availableNames.slice(0, 3).join(", ")}
-                              {availableNames.length > 3 && ` +${availableNames.length - 3} more`}
-                            </p>
-                          )}
-                        </div>
 
-                        {/* Count */}
-                        <div className="shrink-0 text-right">
-                          <p className="font-bold text-sm">{slot.availableCount}</p>
-                          <p className="text-xs text-muted-foreground">
-                            / {totalParticipants}
-                          </p>
+                          <div className="shrink-0">
+                            <p className="text-sm font-semibold">{formatTime12h(slot.localTime)}</p>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="h-2 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${Math.round(intensity * 100)}%`,
+                                  backgroundColor: intensityToColor(intensity),
+                                }}
+                              />
+                            </div>
+                            {availableNames.length > 0 && (
+                              <p className="mt-1 truncate text-xs text-muted-foreground">
+                                {availableNames.slice(0, 3).join(", ")}
+                                {availableNames.length > 3 && ` +${availableNames.length - 3} more`}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="shrink-0 text-right">
+                            <p className="text-sm font-bold">{slot.availableCount}</p>
+                            <p className="text-xs text-muted-foreground">/ {totalParticipants}</p>
+                          </div>
                         </div>
                       </div>
                     );

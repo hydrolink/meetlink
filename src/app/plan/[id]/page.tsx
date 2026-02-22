@@ -1,32 +1,37 @@
-"use client";
+﻿"use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
-  Users,
   BarChart2,
-  Grid,
   CalendarDays,
+  Grid,
+  Info,
   Loader2,
   Settings,
-  Info,
+  Users,
 } from "lucide-react";
-import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { SlotGridSelector } from "@/components/slot-grid-selector";
-import { ResultsHeatmap } from "@/components/results-heatmap";
 import { CalendarView } from "@/components/calendar-view";
 import { ParticipantList } from "@/components/participant-list";
+import { ResultsHeatmap } from "@/components/results-heatmap";
 import { ShareButton } from "@/components/share-button";
-import { loadSession, saveSession, formatDateFull } from "@/lib/utils";
+import { SlotGridSelector } from "@/components/slot-grid-selector";
 import { useTMAUser } from "@/components/tma-provider";
-import type { PlanDetail, ResultsResponse, LocalParticipantSession, GetAvailabilityResponse } from "@/types";
+import { loadSession, saveSession, formatDateFull } from "@/lib/utils";
+import type {
+  GetAvailabilityResponse,
+  LocalParticipantSession,
+  PlanDetail,
+  ResultsResponse,
+} from "@/types";
 
 type ViewTab = "grid" | "heatmap" | "calendar";
 
@@ -35,30 +40,22 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
   const router = useRouter();
   const tmaUser = useTMAUser();
 
-  // Plan data
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [planLoading, setPlanLoading] = useState(true);
 
-  // Session: undefined=unchecked, null=no session, object=has session
   const [session, setSession] = useState<LocalParticipantSession | null | undefined>(undefined);
-
-  // Availability for current user
   const [myAvailability, setMyAvailability] = useState<Map<string, boolean>>(new Map());
 
-  // Results
   const [results, setResults] = useState<ResultsResponse | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
 
-  // UI state
   const [activeTab, setActiveTab] = useState<ViewTab>("grid");
   const [showResults, setShowResults] = useState(false);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<Set<string>>(new Set());
 
-  // Join form state
   const [joinName, setJoinName] = useState("");
   const [joining, setJoining] = useState(false);
 
-  // Load plan data
   useEffect(() => {
     async function fetchPlan() {
       try {
@@ -78,24 +75,23 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
         setPlanLoading(false);
       }
     }
+
     fetchPlan();
   }, [id, router]);
 
-  // Check localStorage for existing session
   useEffect(() => {
     setSession(loadSession(id));
-    // Pre-fill Telegram name
     if (tmaUser?.firstName) setJoinName(tmaUser.firstName);
   }, [id, tmaUser]);
 
-  // Load my availability when session is found
   useEffect(() => {
-    if (!session?.token) return;
+    const token = session?.token;
+    if (!token) return;
 
     async function fetchMyAvailability() {
       try {
         const res = await fetch(`/api/plans/${id}/availability`, {
-          headers: { Authorization: `Bearer ${session!.token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
         const data: GetAvailabilityResponse = await res.json();
@@ -103,13 +99,13 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
         for (const s of data.slots) avMap.set(s.slotKey, s.available);
         setMyAvailability(avMap);
       } catch {
-        // Non-critical — user can still paint
+        // Non-critical - user can still paint availability.
       }
     }
+
     fetchMyAvailability();
   }, [id, session]);
 
-  // Load results when switching to results view
   const fetchResults = useCallback(async () => {
     setResultsLoading(true);
     try {
@@ -127,13 +123,13 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
     if (showResults) fetchResults();
   }, [showResults, fetchResults]);
 
-  // Join plan handler
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
     if (!joinName.trim()) {
       toast.error("Please enter your name");
       return;
     }
+
     setJoining(true);
     try {
       const res = await fetch(`/api/plans/${id}/participants`, {
@@ -159,7 +155,6 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
         isHost: false,
       };
 
-      // If user was the host (has hostToken in storage), merge that in
       const existingSession = loadSession(id);
       if (existingSession?.hostToken) newSession.hostToken = existingSession.hostToken;
 
@@ -173,10 +168,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  // Save availability handler
-  async function handleSaveAvailability(
-    updates: Array<{ slotKey: string; available: boolean }>
-  ) {
+  async function handleSaveAvailability(updates: Array<{ slotKey: string; available: boolean }>) {
     if (!session?.token) return;
 
     const res = await fetch(`/api/plans/${id}/availability`, {
@@ -193,20 +185,18 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
       throw new Error(err.error ?? "Save failed");
     }
 
-    // Keep parent state in sync so the grid remounts with correct data
     setMyAvailability((prev) => {
       const next = new Map(prev);
-      for (const u of updates) next.set(u.slotKey, u.available);
+      for (const update of updates) next.set(update.slotKey, update.available);
       return next;
     });
   }
 
-  // Participant filter handlers
-  function handleToggleParticipant(id: string) {
+  function handleToggleParticipant(participantId: string) {
     setSelectedParticipantIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(participantId)) next.delete(participantId);
+      else next.add(participantId);
       return next;
     });
   }
@@ -220,8 +210,6 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
     setSelectedParticipantIds(new Set());
   }
 
-  // ─── Loading states ──────────────────────────────────────────────────────────
-
   if (planLoading || session === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -232,34 +220,36 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
   if (!plan) return null;
 
-  // ─── Join form (no session) ──────────────────────────────────────────────────
-
   if (!session || (!session.participantId && !session.isHost)) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-xl font-bold truncate">{plan.title}</h1>
-        </div>
+      <div className="space-y-6 py-1">
+        <header className="surface-card px-5 py-5 sm:px-6">
+          <div className="flex items-start gap-3">
+            <Link
+              href="/"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background/80 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Back to home"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="min-w-0 space-y-2">
+              <h1 className="truncate text-2xl font-bold">{plan.title}</h1>
+              {plan.description && <p className="text-sm text-muted-foreground">{plan.description}</p>}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+                <span className="subtle-panel flex items-center gap-1.5 px-2.5 py-1.5">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {formatDateFull(plan.startDate)} - {formatDateFull(plan.endDate)}
+                </span>
+                <span className="subtle-panel flex items-center gap-1.5 px-2.5 py-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  {plan.participantCount} joined
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
 
-        {plan.description && (
-          <p className="text-sm text-muted-foreground">{plan.description}</p>
-        )}
-
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <CalendarDays className="h-3.5 w-3.5" />
-            {formatDateFull(plan.startDate)} – {formatDateFull(plan.endDate)}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-3.5 w-3.5" />
-            {plan.participantCount} joined
-          </span>
-        </div>
-
-        <Card>
+        <Card className="surface-card">
           <CardContent className="pt-6">
             <form onSubmit={handleJoin} className="space-y-4">
               <div className="space-y-1.5">
@@ -276,106 +266,100 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
               </div>
               <Button
                 type="submit"
-                className="w-full h-11"
+                className="h-11 w-full"
                 disabled={joining || !joinName.trim()}
               >
-                {joining ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Join & Mark Availability"
-                )}
+                {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join and Mark Availability"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        <p className="text-xs text-center text-muted-foreground">
-          Timezone: {plan.timezone}
-        </p>
+        <p className="text-center text-xs text-muted-foreground">Timezone: {plan.timezone}</p>
       </div>
     );
   }
 
-  // ─── Main plan view ──────────────────────────────────────────────────────────
-
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <Link href="/" className="text-muted-foreground hover:text-foreground mt-1 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold leading-tight truncate">{plan.title}</h1>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <Badge variant="secondary" className="text-xs">
-                {plan.slotMinutes} min slots
-              </Badge>
-              <span className="text-xs text-muted-foreground">{plan.timezone}</span>
+    <div className="space-y-5 py-1">
+      <header className="surface-card px-5 py-5 sm:px-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <Link
+              href="/"
+              className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-background/80 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Back to home"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="min-w-0 space-y-2">
+              <h1 className="truncate text-2xl font-bold">{plan.title}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{plan.slotMinutes} min slots</Badge>
+                <Badge variant="outline">{plan.timezone}</Badge>
+              </div>
+              {plan.description && (
+                <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  {plan.description}
+                </p>
+              )}
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0">
           {session.isHost && (
             <Link href={`/plan/${id}/edit`}>
-              <Button variant="ghost" size="icon" aria-label="Edit plan">
+              <Button variant="outline" size="icon" aria-label="Edit plan">
                 <Settings className="h-4 w-4" />
               </Button>
             </Link>
           )}
         </div>
-      </div>
+      </header>
 
-      {plan.description && (
-        <p className="text-sm text-muted-foreground flex items-start gap-1.5">
-          <Info className="h-4 w-4 shrink-0 mt-0.5" />
-          {plan.description}
-        </p>
-      )}
-
-      {/* Toggle: Availability vs Results */}
-      <div className="flex rounded-lg border overflow-hidden">
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/80 bg-background/72 p-1">
         <button
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-            !showResults ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+          type="button"
+          className={`h-10 cursor-pointer rounded-xl text-sm font-semibold transition-colors ${
+            !showResults
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted"
           }`}
           onClick={() => setShowResults(false)}
         >
-          <Grid className="h-4 w-4" />
-          My Availability
+          <span className="inline-flex items-center gap-1.5">
+            <Grid className="h-4 w-4" />
+            My Availability
+          </span>
         </button>
         <button
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-            showResults ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+          type="button"
+          className={`h-10 cursor-pointer rounded-xl text-sm font-semibold transition-colors ${
+            showResults
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted"
           }`}
           onClick={() => setShowResults(true)}
         >
-          <BarChart2 className="h-4 w-4" />
-          Results
-          {plan.participantCount > 0 && (
-            <Badge
-              variant={showResults ? "secondary" : "outline"}
-              className="text-xs ml-1 py-0 px-1 h-4"
-            >
-              {plan.participantCount}
-            </Badge>
-          )}
+          <span className="inline-flex items-center gap-1.5">
+            <BarChart2 className="h-4 w-4" />
+            Results
+            {plan.participantCount > 0 && (
+              <Badge variant={showResults ? "secondary" : "outline"} className="ml-1 py-0.5">
+                {plan.participantCount}
+              </Badge>
+            )}
+          </span>
         </button>
       </div>
 
-      {/* Availability editing */}
       {!showResults && (
-        <>
-          {/* Host hasn't joined as participant yet — show inline join prompt */}
+        <div className="space-y-4">
           {session.isHost && !session.participantId && (
-            <Card>
-              <CardContent className="pt-4 pb-4">
-                <p className="text-sm font-medium mb-3">
-                  Add your own availability as host
-                </p>
-                <form onSubmit={handleJoin} className="flex gap-2">
+            <Card className="surface-card">
+              <CardContent className="space-y-3 pt-5">
+                <p className="text-sm font-semibold">Add your host availability</p>
+                <form onSubmit={handleJoin} className="flex flex-col gap-2 sm:flex-row">
                   <Input
                     placeholder="Your display name"
                     value={joinName}
@@ -383,7 +367,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
                     maxLength={50}
                     className="flex-1"
                   />
-                  <Button type="submit" disabled={joining || !joinName.trim()} size="sm">
+                  <Button type="submit" disabled={joining || !joinName.trim()} className="sm:w-28">
                     {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : "Join"}
                   </Button>
                 </form>
@@ -391,32 +375,33 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
             </Card>
           )}
 
-          <SlotGridSelector
-            slots={plan.slots}
-            timezone={plan.timezone}
-            initialAvailability={myAvailability}
-            onSave={handleSaveAvailability}
-            disabled={!session.participantId}
-          />
-        </>
+          <Card className="surface-card">
+            <CardContent className="pt-5">
+              <SlotGridSelector
+                slots={plan.slots}
+                timezone={plan.timezone}
+                initialAvailability={myAvailability}
+                onSave={handleSaveAvailability}
+                disabled={!session.participantId}
+              />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Results */}
       {showResults && (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {resultsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : results ? (
             <>
-              {/* View tabs */}
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={activeTab === "heatmap" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveTab("heatmap")}
-                  className="gap-1.5"
                 >
                   <Grid className="h-3.5 w-3.5" />
                   Heatmap
@@ -425,54 +410,56 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
                   variant={activeTab === "calendar" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveTab("calendar")}
-                  className="gap-1.5"
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                   Best Times
                 </Button>
               </div>
 
-              {activeTab === "heatmap" && (
-                <ResultsHeatmap
-                  slots={plan.slots}
-                  results={results.slots}
-                  participants={results.participants}
-                  totalParticipants={results.totalParticipants}
-                  selectedParticipantIds={
-                    selectedParticipantIds.size > 0 ? selectedParticipantIds : undefined
-                  }
-                  timezone={plan.timezone}
-                />
-              )}
+              <Card className="surface-card">
+                <CardContent className="pt-5">
+                  {activeTab === "heatmap" && (
+                    <ResultsHeatmap
+                      slots={plan.slots}
+                      results={results.slots}
+                      participants={results.participants}
+                      totalParticipants={results.totalParticipants}
+                      selectedParticipantIds={
+                        selectedParticipantIds.size > 0 ? selectedParticipantIds : undefined
+                      }
+                      timezone={plan.timezone}
+                    />
+                  )}
 
-              {activeTab === "calendar" && (
-                <CalendarView
-                  results={
-                    selectedParticipantIds.size > 0
-                      ? results.slots.map((s) => ({
-                          ...s,
-                          availableCount: s.availableParticipantIds.filter((pid) =>
-                            selectedParticipantIds.has(pid)
-                          ).length,
-                          availableParticipantIds: s.availableParticipantIds.filter((pid) =>
-                            selectedParticipantIds.has(pid)
-                          ),
-                        }))
-                      : results.slots
-                  }
-                  participants={results.participants}
-                  totalParticipants={
-                    selectedParticipantIds.size > 0
-                      ? selectedParticipantIds.size
-                      : results.totalParticipants
-                  }
-                />
-              )}
+                  {activeTab === "calendar" && (
+                    <CalendarView
+                      results={
+                        selectedParticipantIds.size > 0
+                          ? results.slots.map((slot) => ({
+                              ...slot,
+                              availableCount: slot.availableParticipantIds.filter((participantId) =>
+                                selectedParticipantIds.has(participantId)
+                              ).length,
+                              availableParticipantIds: slot.availableParticipantIds.filter((participantId) =>
+                                selectedParticipantIds.has(participantId)
+                              ),
+                            }))
+                          : results.slots
+                      }
+                      participants={results.participants}
+                      totalParticipants={
+                        selectedParticipantIds.size > 0
+                          ? selectedParticipantIds.size
+                          : results.totalParticipants
+                      }
+                    />
+                  )}
+                </CardContent>
+              </Card>
 
-              {/* Participant filter */}
               {!plan.hideParticipants && results.participants.length > 0 && (
-                <Card>
-                  <CardContent className="pt-4">
+                <Card className="surface-card">
+                  <CardContent className="pt-5">
                     <ParticipantList
                       participants={results.participants}
                       selectedIds={selectedParticipantIds}
@@ -489,10 +476,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
         </div>
       )}
 
-      {/* Share button */}
-      <div className="pt-2">
-        <ShareButton planId={id} planTitle={plan.title} variant="outline" className="w-full" />
-      </div>
+      <ShareButton planId={id} planTitle={plan.title} variant="outline" className="w-full" />
     </div>
   );
 }

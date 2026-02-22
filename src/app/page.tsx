@@ -1,54 +1,75 @@
-import Link from "next/link";
-import { Calendar, Clock, Users, ArrowRight } from "lucide-react";
+﻿import Link from "next/link";
+import {
+  ArrowRight,
+  Calendar,
+  Clock3,
+  Sparkles,
+  ShieldCheck,
+  Users2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StartParamRedirect } from "@/components/start-param-redirect";
 
 export default function HomePage() {
   return (
-    <div className="relative flex flex-col items-center py-10 gap-8">
-      {/* Deep-link redirect: if opened via t.me/bot/schedule?startapp=<planId>, go straight to the plan */}
+    <div className="relative flex flex-col gap-7 py-8 sm:gap-8 sm:py-10">
       <StartParamRedirect />
-      {/* Logo / Hero */}
-      <div className="text-center space-y-3">
-        <div className="inline-flex items-center justify-center w-[4.5rem] h-[4.5rem] rounded-3xl mb-2 bg-gradient-to-br from-[#f8e4c5] via-[#f4d5ab] to-[#e8b780] ring-1 ring-[#d8b486] shadow-[0_14px_34px_-18px_rgba(143,94,41,0.85)]">
-          <Calendar className="h-8 w-8 text-[#8f5b29]" />
+
+      <section className="surface-card px-5 py-6 sm:px-7 sm:py-7">
+        <div className="space-y-5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Scheduling, Simplified
+          </div>
+
+          <div className="space-y-3">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-[#f8e7c9] via-[#f2d3a8] to-[#e3b27a] ring-1 ring-[#d2ab79] shadow-[0_18px_34px_-20px_rgba(137,87,38,0.95)]">
+              <Calendar className="h-8 w-8 text-[#885726]" />
+            </div>
+            <h1 className="text-3xl font-bold text-[#5b381c] sm:text-4xl">Meetlink</h1>
+            <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+              Create a scheduling poll in seconds, share one link, and instantly see when everyone
+              is free across time zones.
+            </p>
+          </div>
+
+          <Link href="/create" className="block w-full sm:w-auto">
+            <Button size="lg" className="h-12 w-full gap-2 text-base sm:min-w-56 sm:w-auto">
+              Create a New Plan
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+          </Link>
+
+          <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3 sm:text-sm">
+            <div className="subtle-panel px-3 py-2">Fast setup in under 1 minute</div>
+            <div className="subtle-panel px-3 py-2">Designed for mobile and desktop</div>
+            <div className="subtle-panel px-3 py-2">Shareable Telegram deep links</div>
+          </div>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-[#5f3f24]">Meetlink</h1>
-        <p className="text-muted-foreground text-base max-w-xs mx-auto">
-          Find the perfect time to meet. Create a poll, share the link, see when everyone&apos;s
-          free.
-        </p>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <Link href="/create" className="w-full max-w-sm">
-        <Button
-          size="lg"
-          className="w-full h-14 text-base font-semibold gap-2 shadow-[0_14px_26px_-18px_rgba(136,88,35,0.95)]"
-        >
-          Create a New Plan
-          <ArrowRight className="h-5 w-5" />
-        </Button>
-      </Link>
-
-      {/* Features */}
-      <div className="w-full max-w-sm grid grid-cols-1 gap-3 mt-2">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <FeatureItem
           icon={<Calendar className="h-5 w-5" />}
-          title="Flexible date ranges"
-          description="Pick any date range with custom time windows and granularity"
+          title="Flexible date windows"
+          description="Pick a date range, working days, and meeting hours with precise slot durations."
         />
         <FeatureItem
-          icon={<Clock className="h-5 w-5" />}
-          title="Tap to mark availability"
-          description="Intuitive paint-to-select grid works on mobile and desktop"
+          icon={<Clock3 className="h-5 w-5" />}
+          title="Tap or drag selection"
+          description="Participants mark availability quickly using an interaction model built for touch."
         />
         <FeatureItem
-          icon={<Users className="h-5 w-5" />}
-          title="See results instantly"
-          description="Heatmap shows the best times at a glance"
+          icon={<Users2 className="h-5 w-5" />}
+          title="Clear team consensus"
+          description="Heatmaps and ranked best times make it obvious when the group can meet."
         />
-      </div>
+      </section>
+
+      <section className="subtle-panel flex items-center gap-3 px-4 py-3 text-xs text-muted-foreground sm:text-sm">
+        <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+        Private by default: hosts can enable privacy mode to hide participant identities.
+      </section>
     </div>
   );
 }
@@ -63,12 +84,14 @@ function FeatureItem({
   description: string;
 }) {
   return (
-    <div className="flex gap-3 p-4 rounded-xl border border-border/70 bg-card/70 backdrop-blur-[1px]">
-      <div className="shrink-0 text-primary mt-0.5">{icon}</div>
-      <div>
-        <p className="font-medium text-sm">{title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+    <article className="surface-card h-full px-4 py-4 sm:px-5">
+      <div className="space-y-2">
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/12 text-primary">
+          {icon}
+        </div>
+        <h2 className="text-[0.95rem] font-semibold text-foreground">{title}</h2>
+        <p className="text-xs text-muted-foreground sm:text-sm">{description}</p>
       </div>
-    </div>
+    </article>
   );
 }

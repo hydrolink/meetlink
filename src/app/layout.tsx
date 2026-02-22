@@ -1,20 +1,25 @@
-import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+﻿import type { Metadata, Viewport } from "next";
+import { Manrope, Sora } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { TMAProvider } from "@/components/tma-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const geist = Geist({
-  variable: "--font-geist",
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+});
+
+const sora = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Meetlink – Find the Best Time",
+  title: "Meetlink - Find the Best Time",
   description: "Create a scheduling poll, share a link, and find when everyone is free.",
   openGraph: {
-    title: "Meetlink – Find the Best Time",
+    title: "Meetlink - Find the Best Time",
     description: "Create a scheduling poll, share a link, and find when everyone is free.",
     type: "website",
   },
@@ -23,9 +28,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#f7ead6",
+  userScalable: true,
+  themeColor: "#f6efe3",
 };
 
 export default function RootLayout({
@@ -45,9 +49,13 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
       </head>
-      <body className={`${geist.variable} font-sans antialiased bg-background text-foreground`}>
+      <body
+        className={`${manrope.variable} ${sora.variable} font-sans antialiased bg-background text-foreground`}
+      >
         <TMAProvider>
-          <main className="app-shell min-h-screen max-w-lg mx-auto px-4 py-6">{children}</main>
+          <main className="app-shell min-h-screen mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-7">
+            {children}
+          </main>
           <Toaster position="bottom-center" richColors />
         </TMAProvider>
       </body>

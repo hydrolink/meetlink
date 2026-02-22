@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
-import { Users, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ParticipantInfo } from "@/types";
 
@@ -28,11 +28,7 @@ export function ParticipantList({
   const [expanded, setExpanded] = useState(false);
 
   if (participants.length === 0) {
-    return (
-      <div className="text-center py-4 text-muted-foreground text-sm">
-        No participants yet
-      </div>
-    );
+    return <div className="py-4 text-center text-sm text-muted-foreground">No participants yet</div>;
   }
 
   const allSelected = selectedIds.size === participants.length;
@@ -40,64 +36,54 @@ export function ParticipantList({
   const displayedParticipants = expanded ? participants : participants.slice(0, 6);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">
+          <Users className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">
             {participants.length} participant{participants.length !== 1 ? "s" : ""}
           </span>
           {!noneSelected && selectedIds.size < participants.length && (
-            <Badge variant="secondary" className="text-xs">
-              Filtering: {selectedIds.size}
-            </Badge>
+            <Badge variant="secondary">Filtering: {selectedIds.size}</Badge>
           )}
         </div>
 
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-7 px-2"
-            onClick={allSelected ? onDeselectAll : onSelectAll}
-          >
-            {allSelected ? "Deselect all" : "Select all"}
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" className="h-8" onClick={allSelected ? onDeselectAll : onSelectAll}>
+          {allSelected ? "Deselect all" : "Select all"}
+        </Button>
       </div>
 
       {isPrivacyMode && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+        <div className="subtle-panel flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
           <EyeOff className="h-3.5 w-3.5 shrink-0" />
-          Names hidden by host
+          Names are hidden by the host.
         </div>
       )}
 
-      <div className="space-y-1">
-        {displayedParticipants.map((p) => (
+      <div className="space-y-1.5">
+        {displayedParticipants.map((participant) => (
           <label
-            key={p.id}
+            key={participant.id}
             className={cn(
-              "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
-              selectedIds.has(p.id) && "bg-primary/5"
+              "flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 transition-colors hover:bg-muted/55",
+              selectedIds.has(participant.id) && "border-primary/20 bg-primary/7"
             )}
           >
             <Checkbox
-              checked={selectedIds.has(p.id)}
-              onCheckedChange={() => onToggle(p.id)}
+              checked={selectedIds.has(participant.id)}
+              onCheckedChange={() => onToggle(participant.id)}
               className="shrink-0"
             />
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                {isPrivacyMode
-                  ? "?"
-                  : (p.displayName || "?").charAt(0).toUpperCase()}
+
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">
+                {isPrivacyMode ? "?" : (participant.displayName || "?").charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm truncate">
-                {isPrivacyMode ? "Anonymous" : p.displayName || "Unknown"}
+              <span className="truncate text-sm">
+                {isPrivacyMode ? "Anonymous" : participant.displayName || "Unknown"}
               </span>
-              {p.telegramUserId && !isPrivacyMode && (
-                <Eye className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Telegram user" />
+              {participant.telegramUserId && !isPrivacyMode && (
+                <Eye className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="Telegram user" />
               )}
             </div>
           </label>
@@ -105,12 +91,7 @@ export function ParticipantList({
       </div>
 
       {participants.length > 6 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-xs"
-          onClick={() => setExpanded(!expanded)}
-        >
+        <Button variant="ghost" size="sm" className="w-full" onClick={() => setExpanded(!expanded)}>
           {expanded ? "Show less" : `Show ${participants.length - 6} more`}
         </Button>
       )}

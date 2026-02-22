@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn, getGroupedTimezones, getTimezoneOffset } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export function TimezoneSelector({ value, onChange, className }: TimezoneSelecto
     const result: Record<string, string[]> = {};
     for (const [region, zones] of Object.entries(grouped)) {
       const matches = zones.filter(
-        (z) => z.toLowerCase().includes(q) || region.toLowerCase().includes(q)
+        (zone) => zone.toLowerCase().includes(q) || region.toLowerCase().includes(q)
       );
       if (matches.length > 0) result[region] = matches;
     }
@@ -40,19 +40,18 @@ export function TimezoneSelector({ value, onChange, className }: TimezoneSelecto
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between font-normal", className)}
+          className={cn("h-10 w-full justify-between font-medium", className)}
         >
           <span className="truncate">{value}</span>
-          <span className="text-muted-foreground ml-2 shrink-0 text-xs">{offset}</span>
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <span className="ml-2 shrink-0 text-xs text-muted-foreground">{offset}</span>
+          <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-65" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start" sideOffset={4}>
-        {/* Search */}
-        <div className="flex items-center border-b px-3 py-2 gap-2">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+      <PopoverContent className="w-[min(92vw,360px)] rounded-2xl border-border/85 p-0" align="start" sideOffset={6}>
+        <div className="flex items-center gap-2 border-b border-border/75 px-3 py-2.5">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             placeholder="Search timezones..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -60,19 +59,18 @@ export function TimezoneSelector({ value, onChange, className }: TimezoneSelecto
           />
         </div>
 
-        {/* Zone list */}
-        <div className="max-h-64 overflow-y-auto">
+        <div className="max-h-72 overflow-y-auto py-1">
           {Object.entries(filtered).map(([region, zones]) => (
             <div key={region}>
-              <div className="px-3 py-1 text-xs font-semibold text-muted-foreground sticky top-0 bg-popover">
+              <div className="sticky top-0 z-10 bg-popover px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {region}
               </div>
               {zones.map((zone) => (
                 <button
                   key={zone}
                   className={cn(
-                    "w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent cursor-pointer text-left",
-                    value === zone && "bg-accent"
+                    "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent/75",
+                    value === zone && "bg-accent/75"
                   )}
                   onClick={() => {
                     onChange(zone);
@@ -80,19 +78,18 @@ export function TimezoneSelector({ value, onChange, className }: TimezoneSelecto
                     setSearch("");
                   }}
                 >
-                  <Check
-                    className={cn("h-4 w-4 shrink-0", value === zone ? "opacity-100" : "opacity-0")}
-                  />
+                  <Check className={cn("h-4 w-4 shrink-0", value === zone ? "opacity-100" : "opacity-0")} />
                   <span className="truncate">{zone.split("/").pop()?.replace(/_/g, " ")}</span>
-                  <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                     {getTimezoneOffset(zone)}
                   </span>
                 </button>
               ))}
             </div>
           ))}
+
           {Object.keys(filtered).length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">No timezones found</p>
+            <p className="px-3 py-7 text-center text-sm text-muted-foreground">No timezones found</p>
           )}
         </div>
       </PopoverContent>
