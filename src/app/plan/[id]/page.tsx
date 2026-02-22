@@ -192,6 +192,13 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error ?? "Save failed");
     }
+
+    // Keep parent state in sync so the grid remounts with correct data
+    setMyAvailability((prev) => {
+      const next = new Map(prev);
+      for (const u of updates) next.set(u.slotKey, u.available);
+      return next;
+    });
   }
 
   // Participant filter handlers
